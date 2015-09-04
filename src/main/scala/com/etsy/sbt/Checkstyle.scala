@@ -21,6 +21,8 @@ object Checkstyle extends Plugin {
     val checkstyleTarget = SettingKey[File]("checkstyle-target", "The location of the generated checkstyle report")
     val checkstyleConfig = SettingKey[File]("checkstyle-config", "The location of the checkstyle configuration file")
     val xsltTransformations = SettingKey[Option[Set[XSLTSettings]]]("xslt-transformations", "An optional set of XSLT transformations to be applied to the checkstyle output")
+    val checkstyleCheck = SettingKey[Boolean]("checkstyle-check", "Fails the build if issues are found")
+    val checkstyleCheckSeverityLevel = SettingKey[Set[String]]("checkstyle-check-level", "Sets the severity levels which should fail he build")
   }
 
   /**
@@ -51,6 +53,25 @@ object Checkstyle extends Plugin {
     xsltTransformations.value match {
       case None => // Nothing to do
       case Some(xslt) => applyXSLT(file(outputFile), xslt)
+    }
+
+    if (checkstyleCheck.value) {
+      val s: TaskStreams = streams.value
+      s.log.info("Will fail the build if errors are found in XML report.")
+      val report = scala.xml.XML.loadFile(file(outputFile))
+      var issuesFound = false
+      (report \ "file").foreach { file =>
+        (file \ "error").foreach { error =>
+          val severity: String = error.attribute("severity").get.head.text
+          if (checkstyleCheckSeverityLevel.value.contains(severity)) {
+            s.log.warn("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
+            issuesFound = true
+          }
+        }
+      }
+      if (issuesFound) {
+        throw new IllegalStateException("Issue(s) found in Checkstyle report: " + outputFile + ". Failing build!")
+      }
     }
   }
 
@@ -105,6 +126,8 @@ object Checkstyle extends Plugin {
     checkstyleConfig in Test <<= checkstyleConfig,
     checkstyle in Compile <<= checkstyleTask(Compile),
     checkstyle in Test <<= checkstyleTask(Test),
-    xsltTransformations := None
+    xsltTransformations := None,
+    checkstyleCheck := false,
+    checkstyleCheckSeverityLevel := Set("error")
   )
 }
