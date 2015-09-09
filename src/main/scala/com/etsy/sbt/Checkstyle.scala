@@ -17,11 +17,11 @@ object Checkstyle extends Plugin {
   import com.etsy.sbt.Checkstyle.CheckstyleTasks._
 
   object CheckstyleTasks {
-    val checkstyle = TaskKey[Unit]("checkstyle", "Runs checkstyle")
+    val checkstyle        = TaskKey[Unit]("checkstyle", "Runs checkstyle")
+    val checkstyleCheck   = TaskKey[Unit]("checkstyle-check", "Runs checkstyle and fails the task if issues are found")
     val checkstyleTarget = SettingKey[File]("checkstyle-target", "The location of the generated checkstyle report")
     val checkstyleConfig = SettingKey[File]("checkstyle-config", "The location of the checkstyle configuration file")
     val xsltTransformations = SettingKey[Option[Set[XSLTSettings]]]("xslt-transformations", "An optional set of XSLT transformations to be applied to the checkstyle output")
-    val checkstyleCheck = SettingKey[Boolean]("checkstyle-check", "Fails the build if issues are found")
     val checkstyleCheckSeverityLevel = SettingKey[Set[String]]("checkstyle-check-level", "Sets the severity levels which should fail he build")
   }
 
@@ -55,23 +55,58 @@ object Checkstyle extends Plugin {
       case Some(xslt) => applyXSLT(file(outputFile), xslt)
     }
 
-    if (checkstyleCheck.value) {
-      val s: TaskStreams = streams.value
-      s.log.info("Will fail the build if errors are found in XML report.")
-      val report = scala.xml.XML.loadFile(file(outputFile))
-      var issuesFound = false
-      (report \ "file").foreach { file =>
-        (file \ "error").foreach { error =>
-          val severity: String = error.attribute("severity").get.head.text
-          if (checkstyleCheckSeverityLevel.value.contains(severity)) {
-            s.log.warn("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
-            issuesFound = true
-          }
+  }
+
+  /**
+   * Runs checkstyle but fails the task if issues are found.
+   *
+   * Use setting 'checkstyleCheckSeverityLevel' to define what type of issues should break the build.
+   *
+   * TODO: Refactor to avoid code duplication
+   *
+   * @param conf The configuration (Compile or Test) in which context to execute the checkstyle command
+   */
+  def checkstyleCheckTask(conf: Configuration): Initialize[Task[Unit]] = Def.task {
+    val outputFile = (checkstyleTarget in conf).value.getAbsolutePath
+    val checkstyleArgs = Array(
+      "-c", (checkstyleConfig in conf).value.getAbsolutePath, // checkstyle configuration file
+      (javaSource in conf).value.getAbsolutePath, // location of Java source file
+      "-f", "xml", // output format
+      "-o", outputFile // output file
+    )
+
+    val outputDir = target.value
+    if (!outputDir.exists()) {
+      outputDir.mkdirs()
+    }
+    // Checkstyle calls System.exit which would exit SBT
+    // Thus we wrap the call to it with a special security policy
+    // that forbids exiting the JVM
+    noExit {
+      CheckstyleMain(checkstyleArgs)
+    }
+
+    xsltTransformations.value match {
+      case None => // Nothing to do
+      case Some(xslt) => applyXSLT(file(outputFile), xslt)
+    }
+
+    val s: TaskStreams = streams.value
+    s.log.info("Will fail the build if errors are found in Checkstyle's XML report.")
+    val report = scala.xml.XML.loadFile(file(outputFile))
+    var issuesFound = false
+    (report \ "file").foreach { file =>
+      (file \ "error").foreach { error =>
+        val severity: String = error.attribute("severity").get.head.text
+        if (checkstyleCheckSeverityLevel.value.contains(severity)) {
+          s.log.warn("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
+          issuesFound = true
         }
       }
-      if (issuesFound) {
-        throw new IllegalStateException("Issue(s) found in Checkstyle report: " + outputFile + ". Failing build!")
-      }
+    }
+
+    if (issuesFound) {
+      throw new IllegalStateException("Issue(s) found in Checkstyle report: " + outputFile + ". Failing build!")
     }
   }
 
@@ -126,8 +161,9 @@ object Checkstyle extends Plugin {
     checkstyleConfig in Test <<= checkstyleConfig,
     checkstyle in Compile <<= checkstyleTask(Compile),
     checkstyle in Test <<= checkstyleTask(Test),
+    checkstyleCheck in Compile <<= checkstyleCheckTask(Compile),
+    checkstyleCheck in Test <<= checkstyleCheckTask(Test),
     xsltTransformations := None,
-    checkstyleCheck := false,
-    checkstyleCheckSeverityLevel := Set("error")
+    checkstyleCheckSeverityLevel := Set("warning", "error")
   )
 }
