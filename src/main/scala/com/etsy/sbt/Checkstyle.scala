@@ -12,6 +12,7 @@ import sbt._
   * An SBT plugin to run checkstyle over Java code
   *  
   * @author Andrew Johnson <ajohnson@etsy.com>
+  * @author Alejandro Rivera <alejandro.rivera.lopez@gmail.com>
   */
 object Checkstyle extends Plugin {
   import com.etsy.sbt.Checkstyle.CheckstyleTasks._
@@ -94,19 +95,20 @@ object Checkstyle extends Plugin {
     val s: TaskStreams = streams.value
     s.log.info("Will fail the build if errors are found in Checkstyle's XML report.")
     val report = scala.xml.XML.loadFile(file(outputFile))
-    var issuesFound = false
+    var issuesFound = 0
     (report \ "file").foreach { file =>
       (file \ "error").foreach { error =>
         val severity: String = error.attribute("severity").get.head.text
+        // TODO: use checkstyleCheckSeverityLevel level as threshold instead of set
         if (checkstyleCheckSeverityLevel.value.contains(severity)) {
           s.log.warn("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
-          issuesFound = true
+          issuesFound += 1
         }
       }
     }
 
-    if (issuesFound) {
-      throw new IllegalStateException("Issue(s) found in Checkstyle report: " + outputFile + ". Failing build!")
+    if (issuesFound > 0) {
+      throw new IllegalStateException(issuesFound + "issue(s) found in Checkstyle report: " + outputFile + "")
     }
   }
 
@@ -164,6 +166,6 @@ object Checkstyle extends Plugin {
     checkstyleCheck in Compile <<= checkstyleCheckTask(Compile),
     checkstyleCheck in Test <<= checkstyleCheckTask(Test),
     xsltTransformations := None,
-    checkstyleCheckSeverityLevel := Set("warning", "error")
+    checkstyleCheckSeverityLevel := Set("warning", "error") // TODO: use level as threshold
   )
 }

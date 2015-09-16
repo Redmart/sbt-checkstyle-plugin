@@ -6,8 +6,7 @@ Java source files.  For more information about Checkstyle, see
 
 This plugin uses version 6.5 of Checkstyle.
 
-This is a fork of the sbt-code-quality project found
-[here](https://github.com/corux/sbt-code-quality).
+This is a fork of Etsy's sbt-checkstyle-plugin found [here](https://github.com/etsy/sbt-checkstyle-plugin).
 
 ## Setup
 
@@ -54,4 +53,29 @@ You can set `xsltTransformations` like so in `build.sbt`:
 xsltTransformations := {
   Some(Set(XSLTSettings(baseDirectory(_ / "checkstyle-noframes.xml").value, target(_ / "checkstyle-report.html").value)))
 }
+```
+
+### Failing the build
+
+If you want to fail the build when Checkstyle issues are found, you can set `checkstyle-check`.
+
+You can also control what levels of severity should break the build use `checkstyleCheckSeverityLevel` like so:
+ ```scala
+com.etsy.sbt.Checkstyle.CheckstyleTasks.checkstyleCheckSeverityLevel := Set("ignore", "info", "warning", "error")
+```
+
+Default value is:
+```scala
+com.etsy.sbt.Checkstyle.CheckstyleTasks.checkstyleCheckSeverityLevel := Set("error")
+```
+
+Sample output when `checkstyleCheck` is `true`:
+```
+...
+[info] Will fail the build if errors are found in Checkstyle's XML report.
+[warn] Checkstyle error found in [...]/src/main/java/com/etsy/sbt/TestClass.java: Utility classes should not have a public or default constructor.
+[warn] Checkstyle error found in [...]/src/main/java/com/etsy/sbt/TestClass.java: File contains tab characters (this is the first instance).
+...
+[error] (compile:checkstyle) java.lang.IllegalStateException: Issue(s) found in Checkstyle report: [...]/checkstyle-check/target/checkstyle-report.xml. Failing build!
+[error] Total time: 0 s, completed Sep 4, 2015 1:16:23 PM
 ```
