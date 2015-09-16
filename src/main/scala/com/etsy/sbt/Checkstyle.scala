@@ -101,7 +101,7 @@ object Checkstyle extends Plugin {
         val severity: String = error.attribute("severity").get.head.text
         // TODO: use checkstyleCheckSeverityLevel level as threshold instead of set
         if (checkstyleCheckSeverityLevel.value.contains(severity)) {
-          s.log.warn("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
+          s.log.error("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
           issuesFound += 1
         }
       }
@@ -159,12 +159,16 @@ object Checkstyle extends Plugin {
   val checkstyleSettings: Seq[Def.Setting[_]] = Seq(
     checkstyleTarget <<= target(_ / "checkstyle-report.xml"),
     checkstyleTarget in Test <<= target(_ / "checkstyle-test-report.xml"),
+    checkstyleTarget in IntegrationTest <<= target(_ / "checkstyle-test-report.xml"),
     checkstyleConfig := file("checkstyle-config.xml"),
     checkstyleConfig in Test <<= checkstyleConfig,
+    checkstyleConfig in IntegrationTest <<= checkstyleConfig,
     checkstyle in Compile <<= checkstyleTask(Compile),
     checkstyle in Test <<= checkstyleTask(Test),
+    checkstyle in IntegrationTest <<= checkstyleTask(IntegrationTest),
     checkstyleCheck in Compile <<= checkstyleCheckTask(Compile),
     checkstyleCheck in Test <<= checkstyleCheckTask(Test),
+    checkstyleCheck in IntegrationTest <<= checkstyleCheckTask(IntegrationTest),
     xsltTransformations := None,
     checkstyleCheckSeverityLevel := Set("warning", "error") // TODO: use level as threshold
   )
