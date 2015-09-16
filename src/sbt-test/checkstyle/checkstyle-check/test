@@ -1,9 +1,9 @@
 # Check that the checkstyle report is created
+> clean compile:checkstyle
+$ if [[ $? == 0 ]]; then touch success-1; fi
+$ exists success
 
-$ sbt clean compile:checkstyle
-$ $? == 0
-$ exists target/checkstyle-report.xml
-
-$ sbt clean compile:checkstyle-check
-$ $? == 0
+> clean compile:checkstyle-check
+$ if [[ $? != 0 ]]; then touch success-2; fi
+$ exists success-2
 $ exists target/checkstyle-report.xml
