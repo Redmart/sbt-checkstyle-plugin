@@ -108,7 +108,7 @@ object Checkstyle extends Plugin {
     }
 
     if (issuesFound > 0) {
-      throw new IllegalStateException(issuesFound + "issue(s) found in Checkstyle report: " + outputFile + "")
+      throw new IllegalStateException(issuesFound + " issue(s) found in Checkstyle report: " + outputFile + "")
     }
   }
 
