@@ -101,14 +101,18 @@ object Checkstyle extends Plugin {
         val severity: String = error.attribute("severity").get.head.text
         // TODO: use checkstyleCheckSeverityLevel level as threshold instead of set
         if (checkstyleCheckSeverityLevel.value.contains(severity)) {
-          s.log.error("Checkstyle " + severity + " found in " + file.attribute("name").get.head.text + ": " + error.attribute("message").get.head.text)
+          val lineNumber: String = error.attribute("line").get.head.text
+          val filename: String = file.attribute("name").get.head.text
+          val errorMessage: String = error.attribute("message").get.head.text
+          s.log.error("Checkstyle " + severity + " found in " + filename + ":" + lineNumber + ": " + errorMessage)
           issuesFound += 1
         }
       }
     }
 
     if (issuesFound > 0) {
-      throw new IllegalStateException(issuesFound + " issue(s) found in Checkstyle report: " + outputFile + "")
+      s.log.error(issuesFound + " issue(s) found in Checkstyle report: " + outputFile + "")
+      sys.exit(1)
     }
   }
 
