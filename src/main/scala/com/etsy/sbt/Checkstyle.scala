@@ -21,7 +21,7 @@ object Checkstyle extends Plugin {
     val checkstyle        = TaskKey[Unit]("checkstyle", "Runs checkstyle")
     val checkstyleCheck   = TaskKey[Unit]("checkstyle-check", "Runs checkstyle and fails the task if issues are found")
     val checkstyleTarget = SettingKey[File]("checkstyle-target", "The location of the generated checkstyle report")
-    val checkstyleConfig = SettingKey[File]("checkstyle-config", "The location of the checkstyle configuration file")
+    val checkstyleConfig = SettingKey[scala.xml.Node]("checkstyle-config", "The location of the checkstyle configuration file")
     val xsltTransformations = SettingKey[Option[Set[XSLTSettings]]]("xslt-transformations", "An optional set of XSLT transformations to be applied to the checkstyle output")
     val checkstyleCheckSeverityLevel = SettingKey[Set[String]]("checkstyle-check-level", "Sets the severity levels which should fail he build")
   }
@@ -32,18 +32,24 @@ object Checkstyle extends Plugin {
     * @param conf The configuration (Compile or Test) in which context to execute the checkstyle command
     */
   def checkstyleTask(conf: Configuration): Initialize[Task[Unit]] = Def.task {
-    val outputFile = (checkstyleTarget in conf).value.getAbsolutePath
+    val targetFolder: File = (checkstyleTarget in conf).value.getParentFile
+    java.nio.file.Files.createDirectories(java.nio.file.Paths.get(targetFolder.getAbsolutePath))
+
+    val configFile: String = targetFolder + "/checkstyle-config.xml"
+    val outputFile: String = (checkstyleTarget in conf).value.getAbsolutePath
+
+    scala.xml.XML.save(configFile, (checkstyleConfig in conf).value, "UTF-8", true,
+      scala.xml.dtd.DocType("module", scala.xml.dtd.PublicID("-//Puppy Crawl//DTD Check Configuration 1.3//EN",
+        "http://www.puppycrawl.com/dtds/configuration_1_3.dtd"), Nil))
+
+
     val checkstyleArgs = Array(
-      "-c", (checkstyleConfig in conf).value.getAbsolutePath, // checkstyle configuration file
+      "-c", configFile, // checkstyle configuration file
       (javaSource in conf).value.getAbsolutePath, // location of Java source file
       "-f", "xml", // output format
       "-o", outputFile // output file
     )
 
-    val outputDir = target.value
-    if (!outputDir.exists()) {
-      outputDir.mkdirs()
-    }
     // Checkstyle calls System.exit which would exit SBT
     // Thus we wrap the call to it with a special security policy
     // that forbids exiting the JVM
@@ -68,18 +74,23 @@ object Checkstyle extends Plugin {
    * @param conf The configuration (Compile or Test) in which context to execute the checkstyle command
    */
   def checkstyleCheckTask(conf: Configuration): Initialize[Task[Unit]] = Def.task {
-    val outputFile = (checkstyleTarget in conf).value.getAbsolutePath
+    val targetFolder: File = (checkstyleTarget in conf).value.getParentFile
+    java.nio.file.Files.createDirectories(java.nio.file.Paths.get(targetFolder.getAbsolutePath))
+
+    val configFile: String = targetFolder + "/checkstyle-config.xml"
+    val outputFile: String = (checkstyleTarget in conf).value.getAbsolutePath
+
+    scala.xml.XML.save(configFile, (checkstyleConfig in conf).value, "UTF-8", true,
+      scala.xml.dtd.DocType("module", scala.xml.dtd.PublicID("-//Puppy Crawl//DTD Check Configuration 1.3//EN",
+        "http://www.puppycrawl.com/dtds/configuration_1_3.dtd"), Nil))
+
     val checkstyleArgs = Array(
-      "-c", (checkstyleConfig in conf).value.getAbsolutePath, // checkstyle configuration file
+      "-c", configFile, // checkstyle configuration file
       (javaSource in conf).value.getAbsolutePath, // location of Java source file
       "-f", "xml", // output format
       "-o", outputFile // output file
     )
 
-    val outputDir = target.value
-    if (!outputDir.exists()) {
-      outputDir.mkdirs()
-    }
     // Checkstyle calls System.exit which would exit SBT
     // Thus we wrap the call to it with a special security policy
     // that forbids exiting the JVM
