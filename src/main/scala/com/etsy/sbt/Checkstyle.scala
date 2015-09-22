@@ -172,19 +172,19 @@ object Checkstyle extends Plugin {
   }
 
   val checkstyleSettings: Seq[Def.Setting[_]] = Seq(
-    checkstyleTarget <<= target(_ / "checkstyle-report.xml"),
-    checkstyleTarget in Test <<= target(_ / "checkstyle-test-report.xml"),
-    checkstyleTarget in IntegrationTest <<= target(_ / "checkstyle-test-report.xml"),
-    checkstyleConfig := file("checkstyle-config.xml"),
-    checkstyleConfig in Test <<= checkstyleConfig,
-    checkstyleConfig in IntegrationTest <<= checkstyleConfig,
     checkstyle in Compile <<= checkstyleTask(Compile),
-    checkstyle in Test <<= checkstyleTask(Test),
-    checkstyle in IntegrationTest <<= checkstyleTask(IntegrationTest),
     checkstyleCheck in Compile <<= checkstyleCheckTask(Compile),
+    checkstyleConfig := scala.xml.XML.loadFile(file("checkstyle-config.xml")),
+    checkstyleTarget <<= target(_ / "checkstyle-report.xml"),
+
+    checkstyle in Test <<= checkstyleTask(Test),
     checkstyleCheck in Test <<= checkstyleCheckTask(Test),
-    checkstyleCheck in IntegrationTest <<= checkstyleCheckTask(IntegrationTest),
+    checkstyleConfig in Test <<= checkstyleConfig,
+    checkstyleTarget in Test <<= target(_ / "checkstyle-test-report.xml"),
+
     xsltTransformations := None,
-    checkstyleCheckSeverityLevel := Set("warning", "error") // TODO: use level as threshold
+
+    // TODO: use level as threshold
+    checkstyleCheckSeverityLevel := Set("warning", "error")
   )
 }
