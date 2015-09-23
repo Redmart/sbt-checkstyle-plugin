@@ -42,12 +42,11 @@ object Checkstyle extends Plugin {
       scala.xml.dtd.DocType("module", scala.xml.dtd.PublicID("-//Puppy Crawl//DTD Check Configuration 1.3//EN",
         "http://www.puppycrawl.com/dtds/configuration_1_3.dtd"), Nil))
 
-
     val checkstyleArgs = Array(
-      "-c", configFile, // checkstyle configuration file
-      (javaSource in conf).value.getAbsolutePath, // location of Java source file
       "-f", "xml", // output format
-      "-o", outputFile // output file
+      "-o", outputFile, // output file
+      "-c", configFile, // checkstyle configuration file
+      (javaSource in conf).value.getAbsolutePath // location of Java source file
     )
 
     // Checkstyle calls System.exit which would exit SBT
@@ -85,10 +84,10 @@ object Checkstyle extends Plugin {
         "http://www.puppycrawl.com/dtds/configuration_1_3.dtd"), Nil))
 
     val checkstyleArgs = Array(
-      "-c", configFile, // checkstyle configuration file
-      (javaSource in conf).value.getAbsolutePath, // location of Java source file
       "-f", "xml", // output format
-      "-o", outputFile // output file
+      "-o", outputFile, // output file
+      "-c", configFile, // checkstyle configuration file
+      (javaSource in conf).value.getAbsolutePath // location of Java source file
     )
 
     // Checkstyle calls System.exit which would exit SBT
@@ -171,20 +170,19 @@ object Checkstyle extends Plugin {
     }
   }
 
-  val checkstyleSettings: Seq[Def.Setting[_]] = Seq(
+  lazy val checkstyleSettings: Seq[Def.Setting[_]] = Seq(
+    checkstyleConfig := scala.xml.XML.loadFile(file("checkstyle-config.xml")),
+    xsltTransformations := None,
+    // TODO: use level as threshold
+    checkstyleCheckSeverityLevel := Set("warning", "error"),
+
     checkstyle in Compile <<= checkstyleTask(Compile),
     checkstyleCheck in Compile <<= checkstyleCheckTask(Compile),
-    checkstyleConfig := scala.xml.XML.loadFile(file("checkstyle-config.xml")),
-    checkstyleTarget <<= target(_ / "checkstyle-report.xml"),
+    checkstyleTarget in Compile <<= target(_ / "checkstyle-report.xml"),
 
     checkstyle in Test <<= checkstyleTask(Test),
-    checkstyleCheck in Test <<= checkstyleCheckTask(Test),
     checkstyleConfig in Test <<= checkstyleConfig,
-    checkstyleTarget in Test <<= target(_ / "checkstyle-test-report.xml"),
-
-    xsltTransformations := None,
-
-    // TODO: use level as threshold
-    checkstyleCheckSeverityLevel := Set("warning", "error")
+    checkstyleCheck in Test <<= checkstyleCheckTask(Test),
+    checkstyleTarget in Test <<= target(_ / "checkstyle-test-report.xml")
   )
 }
