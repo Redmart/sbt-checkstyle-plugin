@@ -1,3 +1,9 @@
+# Warning: This repo is deprecated!
+
+This fork of the `sbt-checkstyle-plugin` should be considered deprecated since the official plugin has been updated to include all the improvements of this fork (with a few small mostly-cosmetic differences). Please see the official [Release v1.0](https://github.com/etsy/sbt-checkstyle-plugin/releases/tag/1.0.0) for more information.
+
+This repo will be preserved here for those relying on it as a remote reference, but it will no longe be updated.
+
 # sbt-checkstyle-plugin [![Build Status](https://travis-ci.org/etsy/sbt-checkstyle-plugin.svg?branch=master)](https://travis-ci.org/etsy/sbt-checkstyle-plugin)
 
 This project provides an SBT 0.13+ plugin for running Checkstyle over
